@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central Nurse Station — Fall Alert & Escalation Dashboard</title>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="top-header">
+    <div class="brand-section">
+      <div class="brand-icon">🏥</div>
+      <div class="brand-text">
+        <h1>ST. JUDE MEMORIAL HOSPITAL</h1>
+        <div class="brand-subtitle">Central Nurse Station • Acute Care Monitoring & Fall Escalation</div>
+      </div>
+    </div>
+
+    <div class="header-status-group">
+      <div class="system-status-badge" id="system-status-badge">
+        <span class="live-pulse"></span> ONLINE / REAL-TIME
+      </div>
+
+      <div class="header-clock" id="header-clock">--:--:-- PM</div>
+
+      <div class="timeout-selector" title="Configure escalation response countdown duration">
+        <span>Window</span>
+        <select id="timeout-select">
+          <option value="30">30s (Clinical Standard)</option>
+          <option value="10">10s (Fast Demo)</option>
+          <option value="5">5s (Rapid Test)</option>
+        </select>
+      </div>
+
+      <button class="btn btn-sound" id="btn-sound-toggle" title="Toggle audio telemetry alerts">
+        🔊 Sound ON
+      </button>
+
+      <div class="header-actions">
+        <button class="btn btn-simulate" id="btn-simulate-alert" title="Trigger a test fall alert without waiting for real sensor event">
+          🚨 SIMULATE FALL ALERT
+        </button>
+        <button class="btn btn-reset" id="btn-reset-demo" title="Clear test alerts and reset nurses to initial state">
+          🔄 RESET DEMO
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Viewport -->
+  <main class="dashboard-container">
+
+    <!-- Top Summary Cards (Requirement 3) -->
+    <section class="summary-cards-grid">
+      <div class="summary-card card-critical">
+        <div class="summary-card-header">
+          <span class="summary-card-title">
+            <span class="summary-dot dot-critical"></span> Active Critical Alerts
+          </span>
+          <span style="font-size: 1.2rem;">🔴</span>
+        </div>
+        <div class="summary-card-value" id="count-active-critical">0</div>
+        <div class="summary-card-footer">Urgent falls requiring immediate action</div>
+      </div>
+
+      <div class="summary-card card-awaiting">
+        <div class="summary-card-header">
+          <span class="summary-card-title">
+            <span class="summary-dot dot-awaiting"></span> Alerts Awaiting Response
+          </span>
+          <span style="font-size: 1.2rem;">🟠</span>
+        </div>
+        <div class="summary-card-value" id="count-awaiting-response">0</div>
+        <div class="summary-card-footer">Counting down in current escalation window</div>
+      </div>
+
+      <div class="summary-card card-attended">
+        <div class="summary-card-header">
+          <span class="summary-card-title">
+            <span class="summary-dot dot-attended"></span> Patients Being Attended
+          </span>
+          <span style="font-size: 1.2rem;">🟢</span>
+        </div>
+        <div class="summary-card-value" id="count-being-attended">0</div>
+        <div class="summary-card-footer">Nurse / Doctor acknowledged & care in progress</div>
+      </div>
+
+      <div class="summary-card card-resolved">
+        <div class="summary-card-header">
+          <span class="summary-card-title">
+            <span class="summary-dot dot-resolved"></span> Resolved Today
+          </span>
+          <span style="font-size: 1.2rem;">🔵</span>
+        </div>
+        <div class="summary-card-value" id="count-resolved-today">0</div>
+        <div class="summary-card-footer">Care completed and safety verified</div>
+      </div>
+    </section>
+
+    <!-- Prominent Emergency Alert Showcase (Requirements 4, 5, 6) -->
+    <div id="emergency-banner-container" class="emergency-banner-container"></div>
+
+    <!-- Main Layout: Active Alerts Table & Care Team Sidebar -->
+    <div class="dashboard-main-layout">
+
+      <!-- Left Column: Active Alert Table & History -->
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+
+        <!-- Active Fall Alerts Table (Requirement 3) -->
+        <section class="section-box">
+          <div class="section-box-header">
+            <h2 class="section-title">
+              <span>🚨 Active Fall Alerts</span>
+              <span class="section-count-badge" id="active-alerts-count-badge">0 active</span>
+            </h2>
+            <div style="font-size: 0.78rem; color: var(--text-dim);">
+              Real-time telemetry stream • Auto-refresh
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table-monitoring">
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Patient</th>
+                  <th>Room/Bed</th>
+                  <th>Alert</th>
+                  <th>Time</th>
+                  <th>Assigned To</th>
+                  <th>Status</th>
+                  <th>Timer</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="active-alerts-tbody">
+                <tr>
+                  <td colspan="9" class="empty-placeholder">
+                    🟢 No active fall alerts. All patients stable and monitored.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Resolved Alerts & Audit History (Requirement 14) -->
+        <section class="section-box history-section">
+          <div class="section-box-header">
+            <h2 class="section-title">
+              <span>📋 Resolved Alerts & Audit History</span>
+              <span class="section-count-badge" id="resolved-count-badge">0 resolved</span>
+            </h2>
+            <div style="font-size: 0.78rem; color: var(--text-dim);">
+              Complete timestamped response & resolution audit log
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table-monitoring">
+              <thead>
+                <tr>
+                  <th>Alert ID</th>
+                  <th>Patient</th>
+                  <th>Room/Bed</th>
+                  <th>Detected Time</th>
+                  <th>Responded By</th>
+                  <th>Response Time</th>
+                  <th>Total Duration</th>
+                  <th>Audit Log</th>
+                </tr>
+              </thead>
+              <tbody id="resolved-alerts-tbody">
+                <tr>
+                  <td colspan="8" class="empty-placeholder">
+                    No resolved alerts logged yet for today.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Right Column: Care Team Availability & Protocol Info -->
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+
+        <!-- Care Team Availability Panel (Requirement 8) -->
+        <section class="section-box">
+          <div class="section-box-header">
+            <h2 class="section-title">
+              <span>👩‍⚕️ Care Team Roster</span>
+            </h2>
+            <span style="font-size: 0.75rem; color: var(--text-dim);">Shift: Ward A/B</span>
+          </div>
+
+          <div class="care-team-list" id="care-team-list">
+            <!-- Dynamically populated -->
+          </div>
+
+          <div class="escalation-order-box">
+            <div class="escalation-order-title">Automatic Escalation Sequence:</div>
+            <div class="escalation-order-flow">
+              <span>Nurse Priya (1st)</span>
+              <span>→</span>
+              <span>Nurse Anitha (2nd)</span>
+              <span>→</span>
+              <span>Nurse Kavya (3rd)</span>
+              <span>→</span>
+              <span style="color: #f472b6; font-weight: 700;">Doctor Suresh (Emergency)</span>
+            </div>
+            <div style="margin-top: 8px; font-size: 0.7rem; color: var(--text-dim);">
+              * Offline/Responding nurses are automatically bypassed.
+            </div>
+          </div>
+        </section>
+
+        <!-- System Architecture & Clinical Notice Card -->
+        <section class="section-box" style="padding: 16px; font-size: 0.78rem; color: var(--text-muted); line-height: 1.6;">
+          <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <span>ℹ️ Hospital Protocol Notice</span>
+          </div>
+          <p>
+            When a patient fall is confirmed by the AI pose-estimation telemetry, a critical alert is dispatched instantly.
+            Responding acknowledges care responsibility and stops the countdown for the ward team.
+          </p>
+          <div style="margin-top: 10px; padding: 8px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 0.73rem;">
+            <strong>Prototype Boundary:</strong> This system is a prototype nurse-alert dashboard interface. Clinical safety remains guided by institutional emergency care protocols.
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Audit Trail Modal (Requirement 14) -->
+  <div class="modal-backdrop" id="audit-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Chronological Audit Trail</h3>
+        <button class="btn-close-modal" id="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-timeline-body">
+        <!-- Dynamically rendered timeline -->
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

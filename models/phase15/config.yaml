@@ -1,0 +1,26 @@
+best_epoch: 1
+best_validation_f1: 0.8421052631578947
+dataset:
+  path: C:\Users\Balaji\OneDrive\Desktop\Fall_Detection_Project\data\training_dataset
+  train_neg: 1134
+  train_pos: 86
+  train_samples: 1220
+  val_samples: 137
+model:
+  architecture: FallGRUClassifier
+  dropout: 0.2
+  hidden_size: 128
+  input_size: 62
+  num_layers: 2
+phase: 15
+training:
+  batch_size: 32
+  epochs: 30
+  learning_rate: 0.001
+  loss: BCEWithLogitsLoss
+  optimizer: AdamW
+  patience: 7
+  pos_weight: 13.186046511627907
+  scheduler: ReduceLROnPlateau
+  seed: 42
+  weight_decay: 0.0001

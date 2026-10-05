@@ -1,0 +1,17 @@
+# Core Deep Learning & Computer Vision
+torch>=2.0.0
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+
+# Numerical, Scientific & Machine Learning
+numpy>=1.24.0
+scipy>=1.10.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+
+# Rosbag Decoding & Data Serialization
+pyarrow>=14.0.0
+pyyaml>=6.0
+
+# Visualization & Reporting
+matplotlib>=3.7.0

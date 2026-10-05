@@ -1,0 +1,33 @@
+# Fall Detection Baseline Configuration (Backup of original baseline detector)
+model:
+  weights: "yolov8n-pose.pt"
+  conf_threshold: 0.25          # Minimum person detection confidence
+  iou_threshold: 0.45           # NMS IOU threshold
+  img_size: 640                 # Inference resolution (matches 640x480 native input)
+
+kinematics:
+  aspect_ratio_fall_thresh: 0.90      # Height/Width ratio < 0.90 indicates horizontal/lying posture
+  aspect_ratio_upright_thresh: 1.35   # Height/Width ratio > 1.35 indicates upright posture
+  torso_angle_fall_thresh: 50.0       # Angle > 50 degrees from vertical indicates fallen posture
+  torso_angle_upright_thresh: 25.0    # Angle < 25 degrees from vertical indicates upright posture
+  velocity_spike_thresh: 0.35         # Downward center-of-mass velocity spike (norm units/sec)
+  ground_plane_y_thresh: 0.70         # Bounding box bottom Y / frame height > 0.70 (near floor)
+
+weights:
+  w_angle: 0.40                       # Weight for torso orientation
+  w_aspect_ratio: 0.30                # Weight for bounding box aspect ratio
+  w_floor: 0.15                       # Weight for floor proximity
+  w_velocity: 0.15                    # Weight for descent velocity spike
+
+temporal:
+  frame_fall_threshold: 0.50          # Frame score threshold to trigger positive state
+  min_consecutive_frames: 4           # Minimum consecutive positive frames to initiate an event
+  min_event_duration_seconds: 0.40    # Minimum duration (seconds) of a valid fall event
+  merge_gap_seconds: 1.20             # Merge nearby events separated by less than this gap
+  video_fall_min_confidence: 0.55     # Confidence required to designate video as containing a fall
+
+visualization:
+  draw_boxes: true
+  draw_skeleton: true
+  draw_hud: true
+  save_annotated_video: true

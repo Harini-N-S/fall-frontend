@@ -1,0 +1,83 @@
+# Hybrid Fall Detection Configuration (Step 12)
+# Strategy H5: ML Early Trigger + Refined Heuristic FSM Confirmation (W = 1.0s)
+
+model:
+  weights: "yolov8n-pose.pt"
+  yolo_weights: "yolov8n-pose.pt"
+  gru_checkpoint: "models/best_fall_gru.pt"
+  conf_threshold: 0.25          # Minimum person detection confidence
+  iou_threshold: 0.45           # NMS IOU threshold
+  img_size: 640                 # Inference resolution
+  device: "cpu"                 # CPU-compatible execution
+
+kinematics:
+  upright_aspect_ratio: 1.20    # Height/Width ratio > 1.20 indicates upright posture
+  upright_torso_angle: 30.0     # Angle < 30.0 degrees from vertical indicates upright posture
+  horizontal_aspect_ratio: 0.90 # Height/Width ratio < 0.90 indicates horizontal/lying posture
+  horizontal_torso_angle: 50.0  # Angle > 50.0 degrees from vertical indicates horizontal posture
+  dynamic_velocity_thresh: 0.25 # Downward center-of-mass velocity spike (norm units/sec)
+  ground_plane_y_thresh: 0.70   # Bounding box bottom Y / frame height > 0.70 (near floor)
+  min_fall_velocity: 0.15       # Meaningful descent velocity distinguishing fall motion from intentional bending (<0.08)
+  early_angle_threshold: 22.0   # Early tilt angle threshold from vertical (degrees)
+  early_ar_threshold: 1.25      # Early aspect ratio compression threshold
+
+  # Sitting posture definitions
+  sitting_aspect_ratio_min: 0.70 # Aspect ratio >= 0.70 for sitting posture
+  sitting_aspect_ratio_max: 1.05 # Aspect ratio <= 1.05 indicates compressed sitting posture
+  sitting_torso_angle_max: 35.0  # Angle <= 35.0 degrees indicates upright torso while sitting
+  sitting_knee_angle_max: 130.0  # Biomechanical knee angle <= 130 deg (bent knees) when keypoints visible
+  sitting_velocity_max: 0.12     # Settled vertical velocity while seated
+  sitting_dwell_seconds: 0.50    # Minimum continuous dwell time to establish sitting state
+  sitting_min_bottom_y: 0.40     # Elevated/sitting height threshold
+
+  # Bending posture definitions (distinguishes standing leg-supported bend from falls/lying)
+  bending_torso_angle_min: 35.0  # Torso angle >= 35.0 deg indicates substantial tilt
+  bending_knee_angle_min: 135.0  # Biomechanical knee angle >= 135 deg indicates extended legs supporting body
+  bending_aspect_ratio_min: 0.85 # Aspect ratio >= 0.85 confirms person is not collapsed horizontally on floor
+
+weights:
+  w_angle: 0.40                 # Weight for torso orientation
+  w_aspect_ratio: 0.30          # Weight for bounding box aspect ratio
+  w_floor: 0.15                 # Weight for floor proximity
+  w_velocity: 0.15              # Weight for descent velocity spike
+
+state_machine:
+  upright_lookback_seconds: 1.20        # Window to check for prior upright posture before fall
+  stabilization_velocity_thresh: 0.08   # Downward velocity below 0.08 indicates motion has settled
+  stabilization_duration_seconds: 0.60  # Consecutive settled seconds to transition to LYING_DOWN
+  min_fall_event_duration_seconds: 0.40 # Minimum duration for a valid dynamic fall event
+  max_fall_event_duration_seconds: 3.50 # Maximum safety limit for a single continuous fall transition
+  merge_gap_seconds: 0.80               # Merge nearby micro-intervals during the same fall event
+  frame_fall_threshold: 0.50            # Frame score threshold for active fall kinematics
+  video_fall_min_confidence: 0.55       # Video classification confidence threshold
+
+ml_pipeline:
+  temporal_window: 32           # Rolling temporal window length (frames)
+  feature_dim: 62               # Number of pose and kinematic features per frame
+  stride: 4                     # Stride between consecutive window evaluations (frames, 133ms)
+  ml_threshold: 0.50            # Raw sigmoid threshold for positive ML window
+  postprocess_M: 2              # Minimum consecutive positive windows to form ML trigger
+  postprocess_G: 0              # Max gap bridging (0 = no gap bridging)
+  postprocess_D: 0.0            # Minimum duration filter (0.0s)
+
+hybrid_decision:
+  strategy: "H5"                         # Strategy H5: Early Trigger + Confirmation
+  confirmation_window_seconds: 1.0       # Confirmation window W (seconds)
+  duplicate_suppression_cooldown_seconds: 5.0  # Suppression window after confirmed fall
+  suppress_during_static_lying: true     # Suppress new triggers while already motionless on floor
+
+ros2:
+  image_topic: "/device_0/sensor_1/Color_0/image/data"
+  alert_topic: "/fall_detection/alerts"
+  node_name: "hybrid_fall_detector_node"
+
+logging:
+  log_provisional_events: true
+  log_rejections: true
+  event_log_json: "results/realtime_event_log.json"
+
+tracking:
+  enabled: true
+  max_missed_frames: 15          # Max consecutive missed frames before target unlock (1.0s at 15 FPS)
+  iou_reconnect_thresh: 0.15     # Minimum IoU for spatial association fallback
+  max_center_dist_norm: 0.25     # Maximum normalized center displacement for spatial fallback
